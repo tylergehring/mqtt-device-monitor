@@ -1,35 +1,40 @@
 # MQTT Device Monitor Makefile
 CC = gcc
-CFLAGS = -Wall -Wextra -std=c99 -pedantic
+CFLAGS = -Wall -Wextra -std=c99 -g
 LIBS = -lmosquitto
 SRCDIR = src
-OBJDIR = build
-TARGET = mqtt_test
+INCDIR = include
+OBJDIR = obj
+BINDIR = bin
 
-# Create build directory if it doesn't exist
-$(shell mkdir -p $(OBJDIR))
+# Create directories if they don't exist
+$(shell mkdir -p $(OBJDIR) $(BINDIR))
 
-# Source files
-SOURCES = $(SRCDIR)/mqtt_test.c
-OBJECTS = $(OBJDIR)/mqtt_test.o
+# Targets
+all: $(BINDIR)/mqtt_test $(BINDIR)/device_agent
 
-# Default target
-all: $(TARGET)
+# Build mqtt_test
+$(BINDIR)/mqtt_test: $(OBJDIR)/mqtt_test.o
+	$(CC) $^ -o $@ $(LIBS)
 
-# Build the main target
-$(TARGET): $(OBJECTS)
-	$(CC) $(OBJECTS) $(LIBS) -o $(TARGET)
+# Build device_agent
+$(BINDIR)/device_agent: $(OBJDIR)/device_agent.o $(OBJDIR)/mqtt_util.o $(OBJDIR)/metrics.o
+	$(CC) $^ -o $@ $(LIBS)
 
 # Compile source files
 $(OBJDIR)/%.o: $(SRCDIR)/%.c
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -I$(INCDIR) -c $< -o $@
 
 # Clean build files
 clean:
-	rm -rf $(OBJDIR) $(TARGET)
+	rm -rf $(OBJDIR) $(BINDIR)
 
 # Test the MQTT connection
-test: $(TARGET)
-	./$(TARGET)
+test: $(BINDIR)/mqtt_test
+	./$(BINDIR)/mqtt_test
 
-.PHONY: all clean test
+# Run device agent
+device: $(BINDIR)/device_agent
+	./$(BINDIR)/device_agent
+
+.PHONY: all clean test device
